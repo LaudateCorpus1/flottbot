@@ -190,29 +190,25 @@ func isValidHitChatRule(message *models.Message, rule models.Rule, processedInpu
 		}
 		if varArgs > 1 {
 			// error, can ony have 1
-			msg := fmt.Sprintf("You cannot specify more than 1 variable argument")
-			message.Output = msg
+			message.Output = "you cannot specify more than 1 variable argument"
 			return false
 		}
 		if len(rule.Args) > 0 && strings.HasSuffix(rule.Args[len(rule.Args)-1], "+") {
 			if optionalArgs > 0 {
 				// error, cannot combine optional and varargs
-				msg := fmt.Sprintf("You cannot combine optional arguments with variable arguments")
-				message.Output = msg
+				message.Output = "you cannot combine optional arguments with variable arguments"
 				return false
 			}
 		} else if varArgs == 1 {
 			// error, vararg but not in last position
-			msg := fmt.Sprintf("You must specify the variable argument in the last argument position")
-			message.Output = msg
+			message.Output = "you must specify the variable argument in the last argument position"
 			return false
 		}
 		// ensure we only require args that don't end with '?'
 		requiredArgs = len(rule.Args) - optionalArgs
 		// Are we expecting a number of args but don't have as many as the rule defines? Send a helpful message
 		if len(rule.Args) > 0 && requiredArgs > len(args) {
-			msg := fmt.Sprintf("You might be missing an argument or two. This is what I'm looking for\n```%s```", rule.HelpText)
-			message.Output = msg
+			message.Output = fmt.Sprintf("you might be missing an argument or two - this is what I'm looking for\n```%s```", rule.HelpText)
 			return false
 		}
 		// Go through the supplied args and make them available as variables
@@ -387,7 +383,7 @@ func handleHTTP(action models.Action, msg *models.Message, bot *models.Bot) erro
 
 	resp, err := handlers.HTTPReq(action, msg, bot)
 	if err != nil {
-		msg.Error = fmt.Sprintf("Error in request made by action '%s'. See bot admin for more information", action.Name)
+		msg.Error = fmt.Sprintf("error in request made by action '%s' - see bot admin for more information", action.Name)
 		return err
 	}
 
