@@ -28,7 +28,6 @@ func Matcher(inputMsgs <-chan models.Message, outputMsgs chan<- models.Message, 
 func matcherLoop(message models.Message, outputMsgs chan<- models.Message, rules map[string]models.Rule, hitRule chan<- models.Rule, bot *models.Bot) {
 	match := false
 
-RuleSearch:
 	// Look through rules to see if we can find a match
 	for _, rule := range rules {
 		// Only check active rules.
@@ -38,17 +37,9 @@ RuleSearch:
 			// Determine what service we are processing the rule for
 			switch message.Service {
 			case models.MsgServiceChat, models.MsgServiceCLI:
-				foundMatch, stopSearch := handleChatServiceRule(outputMsgs, message, hitRule, rule, processedInput, hit, bot)
-				match = foundMatch
-				if stopSearch {
-					break RuleSearch
-				}
+				match = handleChatServiceRule(outputMsgs, message, hitRule, rule, processedInput, hit, bot)
 			case models.MsgServiceScheduler:
-				foundMatch, stopSearch := handleSchedulerServiceRule(outputMsgs, message, hitRule, rule, bot)
-				match = foundMatch
-				if stopSearch {
-					break RuleSearch
-				}
+				match = handleSchedulerServiceRule(outputMsgs, message, hitRule, rule, bot)
 			}
 		}
 	}
@@ -71,8 +62,8 @@ func getProccessedInputAndHitValue(messageInput, ruleRespondValue, ruleHearValue
 
 // handleChatServiceRule handles the processing logic for a rule that came from either the chat application or CLI remote
 // nolint:gocyclo // mark for refactor
-func handleChatServiceRule(outputMsgs chan<- models.Message, message models.Message, hitRule chan<- models.Rule, rule models.Rule, processedInput string, hit bool, bot *models.Bot) (bool, bool) {
-	match, stopSearch := false, false
+func handleChatServiceRule(outputMsgs chan<- models.Message, message models.Message, hitRule chan<- models.Rule, rule models.Rule, processedInput string, hit bool, bot *models.Bot) bool {
+	match := false
 	if rule.Respond != "" || rule.Hear != "" {
 		// You can only use 'respond' OR 'hear'
 		if rule.Respond != "" && rule.Hear != "" {
@@ -85,7 +76,7 @@ func handleChatServiceRule(outputMsgs chan<- models.Message, message models.Mess
 
 		if hit && message.ThreadTimestamp != "" && rule.IgnoreThreads {
 			bot.Log.Debug().Msg("response suppressed due to 'ignore_threads' being set")
-			return true, true
+			return true
 		}
 
 		// check if limit_to_rooms is set on the rule
@@ -110,7 +101,7 @@ func handleChatServiceRule(outputMsgs chan<- models.Message, message models.Mess
 				// suppress the response
 				if !isInLimitToRooms {
 					bot.Log.Debug().Msgf("rule '%s' was matched but skipped due to message not coming from a room defined in 'limit_to_rooms'", rule.Name)
-					return true, false
+					return true
 				}
 			}
 
@@ -119,13 +110,13 @@ func handleChatServiceRule(outputMsgs chan<- models.Message, message models.Mess
 
 		// if it's a 'respond' rule, make sure the bot was mentioned
 		if hit && rule.Respond != "" && !message.BotMentioned && message.Type != models.MsgTypeDirect {
-			return match, stopSearch
+			return match
 		}
 
 		if hit {
 			bot.Log.Info().Msgf("found rule match '%s' for input '%s'", rule.Name, message.Input)
 			// Don't go through more rules if rule is matched
-			match, stopSearch = true, true
+			match = true
 			// Publish metric to prometheus - metricname will be combination of bot name and rule name
 			Prommetric(bot.Name+"-"+rule.Name, bot)
 			// Capture untouched user input
@@ -138,26 +129,26 @@ func handleChatServiceRule(outputMsgs chan<- models.Message, message models.Mess
 				outputMsgs <- message
 				hitRule <- models.Rule{}
 				// prevent actions from being run; exit early
-				return match, stopSearch
+				return match
 			}
 			msg := deepcopy.Copy(message).(models.Message)
 			go doRuleActions(msg, outputMsgs, rule, hitRule, bot)
-			return match, stopSearch
+			return match
 		}
 	}
-	return match, stopSearch
+	return match
 }
 
 // handleSchedulerServiceRule handles the processing logic for a rule that came from the Scheduler remote
-func handleSchedulerServiceRule(outputMsgs chan<- models.Message, message models.Message, hitRule chan<- models.Rule, rule models.Rule, bot *models.Bot) (bool, bool) {
-	match, stopSearch := false, false
+func handleSchedulerServiceRule(outputMsgs chan<- models.Message, message models.Message, hitRule chan<- models.Rule, rule models.Rule, bot *models.Bot) bool {
+	match := false
 	if rule.Schedule != "" && rule.Name == message.Attributes["from_schedule"] {
-		match, stopSearch = true, true // Don't go through more rules if rule is matched
+		match = true // Don't go through more rules if rule is matched
 		msg := deepcopy.Copy(message).(models.Message)
 		go doRuleActions(msg, outputMsgs, rule, hitRule, bot)
-		return match, stopSearch
+		return match
 	}
-	return match, stopSearch
+	return match
 }
 
 // handleNoMatch - handles logic for unmatched rule
