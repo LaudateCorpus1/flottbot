@@ -13,7 +13,7 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/xid v1.3.0
 	github.com/rs/zerolog v1.23.0
