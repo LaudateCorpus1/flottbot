@@ -20,5 +20,5 @@ require (
 	github.com/slack-go/slack v0.9.4
 	github.com/spf13/viper v1.8.1
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/crypto v0.1.0 // indirect
 )
